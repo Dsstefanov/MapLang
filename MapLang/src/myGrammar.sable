@@ -1,0 +1,295 @@
+Package MapLang;
+
+Helpers
+  tab   = 9;
+  cr    = 13;
+  lf    = 10;
+  digit = ['0'..'9'];
+  lowercase = ['a'..'z'];
+  uppercase = ['A'..'Z'];
+  letter  = lowercase | uppercase;
+  idletter = letter | '_';
+  idchar  = letter | '_' | digit;
+
+Tokens
+  eol   = cr | lf | cr lf;
+  blank = ' ' | tab;
+  star  = '*';
+  slash = '/';
+  plus  = '+';
+  minus = '-';
+  l_paren = '(';
+  r_paren = ')';
+  semicolon = ';';
+  equal = '=';
+  comma = ',';
+  int  = '0'| [digit-'0'] digit*;
+  create =  'create';
+  map =  'map';
+  point =  'point';
+  from = 'from';
+  to = 'to';
+  at = 'at';
+  by = 'by';
+  right = 'right';
+  left = 'left';
+  up = 'up';
+  down = 'down';
+  and = 'and';
+  float = ['+'+'-']? digit* '.' digit+;
+  copy = 'copy';
+  add = 'add';
+  room = 'room';
+  template = 'template';
+  templates = 'templates';
+  shape = 'shape';
+  line = 'line';
+  coordinates = 'coordinates';
+  in = 'in';
+  floor = 'floor';
+  rectangle = 'rectangle';
+  circle = 'circle';
+  points = 'points';
+  shapes = 'shapes';
+  doorway = 'doorway';
+  window = 'window';
+  exit = 'exit';
+  start = 'start';
+  nearstart = 'nearstart';
+  halfway = 'halfway';
+  nearend = 'nearend';
+  end = 'end';
+  move = 'move';
+  id = idletter idchar*;
+
+Ignored Tokens
+  blank, eol;
+
+Productions
+  program_start {-> program_start} = {create} create create_create semicolon program_start {-> New program_start.init(create_create.program_start, program_start.program_start)}
+      | {copy} copy c_copy semicolon program_start {-> New program_start.init(c_copy.program_start, program_start.program_start)}
+      | {add} add a_add semicolon program_start {-> New program_start.init(a_add.program_start, program_start.program_start)}
+      | ;
+
+  create_create {-> program_start} = {create_map} map create_map {-> New program_start.create_map(create_map.create_map)}
+      | {create_point} point create_point {-> New program_start.create_point(create_point.create_point)}
+      | {create_room} room create_room {-> create_room.program_start}
+      | {create_template} template create_template {-> New program_start.create_template(create_template.create_template)}
+      | {create_shape} shape create_shape {-> create_shape.program_start};
+
+  create_map {-> create_map} = equal id {-> New create_map(id)};
+
+  create_point {-> create_point} = {id} equal id {-> New create_point.create_point(id)}
+      | {equal_relation} comma relation equal id {-> New create_point.create_point_extended(relation.ast_relation, id)};
+
+  create_room {-> program_start} =
+      in [left]:id comma floor int equal [right]:id {-> New program_start.create_room(left, int, right)};
+
+  create_template {-> create_template} = equal id {-> New create_template(id)};
+
+  create_shape {-> program_start} = {rect} rectangle comma rectangle_rectangle { -> rectangle_rectangle.program_start }
+      | {circ} circle comma circle_circle { -> circle_circle.program_start }
+      | {line} line comma from [left_coord]:coordinate to [right_coord]:coordinate equal id { -> New program_start.create_line(left_coord.ast_coordinate, right_coord.ast_coordinate, id)};
+
+  relation {-> ast_relation} = {relation} precise_dir relation_explicit { -> New ast_relation.relation_explicit(precise_dir.ast_precise_dir, relation_explicit.ast_relation_explicit)}
+      | {coordinate} coordinate {-> New ast_relation.relation_coordinate(coordinate.ast_coordinate)};
+
+  nullable_relation {-> ast_nullable_relation} = {relation} precise_dir relation_explicit {-> New ast_nullable_relation.e_relation_explicit(precise_dir.ast_precise_dir, relation_explicit.ast_relation_explicit)}
+      | precise_dir {-> New ast_nullable_relation.e_relation(precise_dir.ast_precise_dir)}
+      | {coordinate} coordinate {-> New ast_nullable_relation.e_relation_coordinate(coordinate.ast_coordinate)};
+
+  precise_dir {-> ast_precise_dir} = float dir second_precise_dir?  {-> New ast_precise_dir(float, dir.ast_dir, second_precise_dir.ast_second_precise_dir)};
+
+
+  second_precise_dir {-> ast_second_precise_dir} = and float dir {-> New ast_second_precise_dir(float, dir.ast_dir)};
+
+  relation_explicit {-> ast_relation_explicit} =  from id {-> New ast_relation_explicit(id)};
+
+  dir {-> ast_dir} = {right} right {-> New ast_dir.right_dir(right)}
+      | {left} left {-> New ast_dir.left_dir(left)}
+      | {up} up {-> New ast_dir.up_dir(up)}
+      | {down} down {-> New ast_dir.down_dir(down)};
+
+  rectangle_rectangle {-> program_start} =
+      {rel_rect} [width]:float by [height]:float at relation equal id {-> New program_start.create_rectangle_one(width, height, relation.ast_relation, id)}
+      | {abs_rect} from [left1]:id to [left2]:id equal [right]:id {-> New program_start.create_rectangle_two(left1, left2, right)};
+
+  circle_circle {-> program_start} =
+      float at relation equal id {-> New program_start.create_circle(float, relation.ast_relation, id)};
+
+  c_copy {-> program_start} =
+      {copy_points} points copy_points { -> New program_start.copy_p(copy_points.copy_points)}
+      | {copy_template} template copy_template { -> New program_start.copy_t(copy_template.copy_template)}
+      | {copy_shape} shape copy_shape { -> New program_start.copy_s(copy_shape.copy_shapes)};
+
+  copy_points {-> copy_points} =
+      [l]:comma l_paren [left]:multi_id r_paren [r]:comma nullable_relation equal [right]:multi_id {-> New copy_points(left.ast_multi_id, nullable_relation.ast_nullable_relation, right.ast_multi_id)};
+
+  multi_id {-> ast_multi_id} = id id_list? {-> New ast_multi_id(id, id_list.ast_multi_id)};
+
+  id_list {-> ast_multi_id} =  {id_list} comma id id_list? {-> New ast_multi_id(id, id_list.ast_multi_id)};
+
+  copy_shape {-> copy_shapes} =
+       [l]:comma l_paren [left]:multi_id r_paren [r]:comma nullable_relation equal [right]:multi_id {-> New copy_shapes(left.ast_multi_id, nullable_relation.ast_nullable_relation, right.ast_multi_id) };
+
+  copy_template {-> copy_template} = [l]:comma [left_id]:id [r]:comma nullable_relation equal [right_id]:id {-> New copy_template(left_id, nullable_relation.ast_nullable_relation, right_id)};
+
+  a_add {-> program_start} = {shape_room_template} to a_add_helper { -> a_add_helper.program_start }
+      | {add_opening} add_opening { -> add_opening.program_start };
+
+  a_add_helper {-> program_start} =  {add_shape_to_shape} shape add_shape { -> add_shape.program_start}
+                       | {add_room_to_room} room add_to_room { -> add_to_room.program_start}
+                       | {add_template_to_template} template add_template { -> add_template.program_start};
+
+  add_shape {-> program_start} = id comma add_shape_generic {-> New program_start.add_to_shape(id, add_shape_generic.type_list)};
+  add_template {-> program_start} = id comma add_shape_generic {-> New program_start.add_to_template(id, add_shape_generic.type_list)};
+
+
+  add_to_room {-> program_start} =  id comma room_type {-> New program_start.add_to_room(id, room_type.room_type)};
+
+  room_type {-> room_type} =
+      {points_to_multi_point} points multi_id {-> New room_type.add_to_room_points(multi_id.ast_multi_id)}
+      | {shape_to_multi_shape} shapes multi_id {-> New room_type.add_to_room_shapes(multi_id.ast_multi_id)}
+      | {id} template id {-> New room_type.add_to_room_id(id)}
+      | {multi_coordinate} coordinates multi_coordinate {-> New room_type.add_to_room_multi_coordinate(multi_coordinate.ast_multi_coordinate)};
+
+  multi_coordinate {-> ast_multi_coordinate} =
+      coordinate coordinate_list? { -> New ast_multi_coordinate(coordinate.ast_coordinate, coordinate_list.ast_multi_coordinate)};
+
+  coordinate_list {-> ast_multi_coordinate} = {coor_list} comma coordinate coordinate_list? {-> New ast_multi_coordinate(coordinate.ast_coordinate, coordinate_list.ast_multi_coordinate)};
+
+  add_shape_generic {-> type_list} =
+      {point_to_multi_point} points multi_id {-> New type_list.add_points_to_shape(multi_id.ast_multi_id)}
+      | {shape_to_multi_shape} shapes multi_id  {-> New type_list.add_shapes_to_shape(multi_id.ast_multi_id)}
+      | {multi_template} templates multi_id  {-> New type_list.add_template_to_shape(multi_id.ast_multi_id)}
+      | {multi_coordinate} coordinates multi_coordinate {-> New type_list.add_coordinate_to_shape(multi_coordinate.ast_multi_coordinate)};
+
+  add_opening {-> program_start} =
+      {doorway} doorway to id position comma floor int {-> New program_start.add_doorway_position(id, position.ast_position, int)}
+      | {window} window to id position comma floor int {-> New program_start.add_window_position(id, position.ast_position, int)}
+      | {exit} exit to id position comma floor int {-> New program_start.add_exit_position(id, position.ast_position, int)};
+
+  position {-> ast_position} =
+      {distance} distance [l]:id comma [r]:id {-> New ast_position.distance(distance.ast_dis, l, r)}
+      | {coordinate} coordinate {-> New ast_position.coordinate(coordinate.ast_coordinate)};
+
+  distance {-> ast_dis} =
+      {start} start {-> New ast_dis.start(start)}
+      | {near_start} nearstart {-> New ast_dis.near_start(nearstart)}
+      | {halfway} halfway {-> New ast_dis.halfway(halfway)}
+      | {near_end} nearend {-> New ast_dis.near_end(nearend)}
+      | {end} end {-> New ast_dis.end(end)};
+
+
+    coordinate {-> ast_coordinate}= l_paren [x]:float comma [y]:float r_paren {-> New ast_coordinate(x, y)};
+
+
+Abstract Syntax Tree
+
+//Program start
+program_start =
+        //Init statement
+        {init} [statement_one]:program_start [statement_two]:program_start
+
+        //Create
+        | {create_map} create_map // implemented
+        | {create_point} create_point // implemented
+        | {create_template} create_template // implemented
+        | {create_room} [left]:id int [right]:id // implemented
+        | {create_rectangle_one} [width]:float [height]:float ast_relation id // implemented
+        | {create_rectangle_two} [left1]:id [left2]:id [right]:id // implemented
+        | {create_circle} float ast_relation id //implemented
+        | {create_line} [left]:ast_coordinate [right]:ast_coordinate id
+
+        //Copy
+            //point
+        | {copy_p} copy_points // implemented
+            //template
+        | {copy_t} copy_template
+            //shape
+        | {copy_s} copy_shapes
+
+        //Add
+        | {add_to_room} id room_type // implemented
+        | {add_to_shape} id type_list
+        | {add_to_template} id type_list // implemented
+
+        //Opening
+            // Missing map - add doorway to cassiopeia nearstart p1, p2, floor 1;
+            // Have to update type rules and type checker
+        | {add_doorway_position} id ast_position int
+        | {add_window_position} id ast_position int
+        | {add_exit_position} id ast_position int
+
+        | ;
+
+//Create types
+create_map = id;
+create_point = {create_point} id | {create_point_extended} ast_relation id;
+create_template = id;
+
+//Copy types
+copy_points = [left]:ast_multi_id ast_nullable_relation [right]:ast_multi_id;
+copy_template = [left]:id ast_nullable_relation [right]:id;
+copy_shapes = [left]:ast_multi_id ast_nullable_relation [right]:ast_multi_id;
+
+//Add to template
+//add_points_to_template = id ast_multi_id;
+//add_shapes_to_template = id ast_multi_id;
+//add_templates_to_template = id ast_multi_id;
+
+
+
+//Relation
+
+
+ast_relation = {relation_explicit} ast_precise_dir ast_relation_explicit
+          | {relation_coordinate} ast_coordinate;
+
+ast_nullable_relation = {e_relation} ast_precise_dir
+          | {e_relation_explicit} ast_precise_dir ast_relation_explicit
+          | {e_relation_coordinate} ast_coordinate;
+
+ast_relation_explicit = id;
+
+//Dir
+ast_dir = {left_dir} left
+          | {right_dir} right
+          | {up_dir} up
+          | {down_dir} down;
+
+//Distance
+ast_dis = {start} start
+          | {near_start} nearstart
+          | {halfway} halfway
+          | {near_end} nearend
+          | {end} end;
+
+//Position
+ast_position = {distance} ast_dis [l]:id [r]:id
+                | {coordinate} ast_coordinate;
+
+ast_precise_dir = float ast_dir ast_second_precise_dir?;
+
+
+ast_second_precise_dir = float ast_dir;
+
+//Multi_Id
+ast_multi_id = id ast_multi_id?;
+
+//Multi_Coordinate
+ast_multi_coordinate = ast_coordinate ast_multi_coordinate?;
+
+//Type_list
+type_list = {add_points_to_shape} ast_multi_id
+        | {add_shapes_to_shape} ast_multi_id
+        | {add_template_to_shape} ast_multi_id
+        | {add_coordinate_to_shape} ast_multi_coordinate;
+
+//Room_type
+room_type = {add_to_room_points} ast_multi_id
+        | {add_to_room_shapes} ast_multi_id
+        | {add_to_room_id} id
+        | {add_to_room_multi_coordinate} ast_multi_coordinate;
+
+ast_coordinate = [x]:float [y]:float;

@@ -1,0 +1,53 @@
+create map = cassiopeia;
+
+
+create shape rectangle, 100.0 by 120.0 at (0.0, 0.0) = r4138;
+create shape rectangle, 90.0 by 75.0 at (135.0, -405.0) = r4128;
+create shape rectangle, 100.0 by 50.0 at (300.0, -480.0) = rstairway;
+create shape rectangle, 120.0 by 100.0 at (320.0, 125.0) = r4101;
+copy shape, (r4101), 120.0 right = r4103;
+
+create point, (300.0, -480.0) = topLeftStairway;
+create point, (400.0, -480.0) = topRightStairway;
+add exit to cassiopeia halfway topLeftStairway, topRightStairway, floor 1;
+
+create point, (585.0, 25.0) = p8;
+create point, (685.0, -135.0) = p9;
+create point, (685.0, 125.0) = px;
+create point, (560.0, 125.0) = px1;
+create point, 25.0 left from p8 = px2;
+create shape rectangle, from p8 to p9 = r4110;
+add to shape r4110, points px, px1, px2;
+
+create shape rectangle, 115.0 by 35.0 at (455.0, -495.0) = rprinterum;
+create point, (570.0, -495.0) = printUpperRight;
+create point, 15.0 right from printUpperRight = printUpperOuterRight;
+create point, 75.0 up from printUpperOuterRight = printTopRight;
+create point, 130.0 left from printTopRight = printTopLeft;
+add to shape rprinterum, points printUpperOuterRight, printTopRight, printTopLeft;
+
+
+copy shape, (r4138), 120.0 down = r4136;
+copy shape, (r4138, r4136), 240.0 down = r4134, r4132;
+copy shape, (r4138, r4136), 60.0 down and 145.0 right = r4159, r4157;
+copy shape, (r4138, r4136, r4134), 15.0 down and 445.0 right = r4146, r4148, r4150;
+copy shape, (r4146, r4148, r4150), 120.0 down and 140.0 right = r4112, r4114, r4116;
+
+
+create room in cassiopeia, floor 1 = leftwing;
+create room in cassiopeia, floor 1 = rightwing;
+create room in cassiopeia, floor 1 = bottomwing;
+
+add to room leftwing, shapes r4132, r4134, r4136, r4138;
+add to room leftwing, shapes r4157, r4159, r4128;
+
+add to room rightwing, shapes r4101, r4103;
+add to room rightwing, shapes r4146, r4148, r4150;
+add to room rightwing, shapes r4110, r4112, r4114, r4116;
+
+create shape line, from (100.0, 0.0) to (145.0, 0.0) = hallway;
+add to shape hallway, coordinates (145.0, -375.0), (545.0, -375.0), (545.0,-15.0), (320.0, -15.0),
+(320.0, 25.0), (585.0, 25.0), (585.0, -420.0), (455.0, -420.0), (455.0, -530.0), (225.0, -530.0),
+(225.0, -405.0), (135.0, -405.0), (100.0, -405.0);
+
+add to room bottomwing, shapes rstairway, rprinterum, hallway;

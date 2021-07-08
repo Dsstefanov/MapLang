@@ -1,0 +1,39 @@
+ */+-();=,
+0 1230
+1.222 0.2222 -0.00123
+create
+map
+point
+from
+to
+at
+by
+right
+left
+up
+down
+and
+copy
+add
+room
+template
+templates
+shape
+coordinates
+in
+floor
+rectangle
+circle
+points
+shapes
+doorway
+window
+exit
+start
+nearstart
+halfway
+nearend
+end
+move
+cassiopeia
+testid
